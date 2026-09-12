@@ -1,0 +1,46 @@
+<Window x:Class="LyricFloat.App.Views.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="LyricFloat"
+        Width="760" Height="220"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        WindowStartupLocation="Manual"
+        Loaded="OnLoaded"
+        MouseLeftButtonDown="OnMouseLeftButtonDown">
+    <Window.ContextMenu>
+        <ContextMenu>
+            <MenuItem Header="LyricFloat · Phase 1" IsEnabled="False" />
+            <MenuItem Header="Drag the lyrics to move" IsEnabled="False" />
+            <Separator />
+            <MenuItem Header="Exit LyricFloat" Click="OnExitClick" />
+        </ContextMenu>
+    </Window.ContextMenu>
+    <Border Background="Transparent" Padding="24,20" Cursor="SizeAll"
+            ToolTip="Drag to move · Right-click to exit">
+        <StackPanel VerticalAlignment="Center">
+            <StackPanel.Resources>
+                <Style TargetType="TextBlock">
+                    <Setter Property="Foreground" Value="White" />
+                    <Setter Property="FontFamily" Value="Segoe UI" />
+                    <Setter Property="TextAlignment" Value="Center" />
+                    <Setter Property="TextWrapping" Value="Wrap" />
+                    <Setter Property="Effect">
+                        <Setter.Value>
+                            <DropShadowEffect Color="Black" BlurRadius="6"
+                                              ShadowDepth="1" Opacity="0.9" />
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </StackPanel.Resources>
+            <TextBlock Text="{Binding PreviousLyric}" FontSize="22" Opacity="0.45" />
+            <TextBlock Text="{Binding CurrentLyric}" FontSize="34"
+                       FontWeight="SemiBold" Margin="0,12" />
+            <TextBlock Text="{Binding NextLyric}" FontSize="22" Opacity="0.45" />
+        </StackPanel>
+    </Border>
+</Window>

@@ -175,7 +175,7 @@ internal static class Phase4Tests
         Check(sync.GetFrame().Current == "B first", "backward seek rewinds lookup");
         Check(calls == 2, "same track checkpoints do not fetch lyrics");
         sync.Suspend("Network issue"); now += 5000;
-        Check(sync.GetFrame().Current == "", "network message expires");
+        Check(sync.GetFrame().Current == "B first", "network outage preserves frozen lyrics");
         sync.UpdateTrack(Track("B", 22000));
         Check(sync.GetFrame().Current == "B last" && calls == 2, "network recovery reuses current lyrics");
         sync.Clear("Spotify not connected");

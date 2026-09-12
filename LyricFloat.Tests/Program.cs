@@ -35,6 +35,7 @@ internal static class Program
             _passed += await Phase4Tests.RunAsync();
             _passed += await Phase5Tests.RunAsync();
             _passed += await Phase5WindowTests.RunAsync();
+            _passed += await Phase6Tests.RunAsync();
             Console.WriteLine($"PASS: {_passed} assertions; no Spotify server requests.");
             return 0;
         }
@@ -189,6 +190,11 @@ internal static class Program
         Check((await playback.GetCurrentAsync(default)).Message == "Nothing playing", "HTTP 204 handled");
         handler.Respond = _ => throw new HttpRequestException("synthetic network failure");
         await ThrowsAsync<HttpRequestException>(() => playback.GetCurrentAsync(default), "network error reaches retry loop");
+        handler.Respond = request => request.RequestUri!.Host == "accounts.spotify.com"
+            ? throw new HttpRequestException("synthetic refresh outage")
+            : Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
+        await ThrowsAsync<HttpRequestException>(() => playback.GetCurrentAsync(default), "refresh transport failure remains retryable");
+        Check(auth.IsConnected && await store.LoadAsync(default) is not null, "temporary refresh outage preserves credentials");
         await auth.LogoutAsync();
         Check(!auth.IsConnected && await store.LoadAsync(default) is null, "logout clears session");
     }

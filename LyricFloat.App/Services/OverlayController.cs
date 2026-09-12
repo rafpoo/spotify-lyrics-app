@@ -126,7 +126,7 @@ public sealed class OverlayController
         }
         catch (Win32Exception exception)
         {
-            Trace.TraceWarning("Could not change overlay lock: {0}", exception.Message);
+            AppLog.Exception("OverlayLock", exception);
         }
     }
 

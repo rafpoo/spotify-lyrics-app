@@ -17,6 +17,18 @@
         </StackPanel>
         <TextBlock DockPanel.Dock="Top" Text="LyricFloat" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,16"/>
         <TabControl>
+            <TabItem Header="Spotify">
+                <StackPanel Margin="16">
+                    <TextBlock Text="{Binding SpotifyStatus}" FontWeight="SemiBold"/>
+                    <Button Content="{Binding SpotifyAction}" IsEnabled="{Binding CanConnect}" Click="OnSpotify"/>
+                    <TextBlock Text="Spotify Client ID" Margin="0,20,0,4"/>
+                    <TextBox Text="{Binding SpotifyClientId, UpdateSourceTrigger=PropertyChanged}" Padding="6" MaxLength="32"/>
+                    <Button Content="Save Client ID" Click="OnSaveClientId"/>
+                    <TextBlock Text="Use your Spotify Developer application's Client ID. No client secret is needed. Register this exact redirect URI:"/>
+                    <TextBox Text="http://127.0.0.1:43821/callback" IsReadOnly="True" Padding="6"/>
+                    <TextBlock Text="Login opens in your default browser only when you choose Connect. Your Spotify account must have access to the developer application."/>
+                </StackPanel>
+            </TabItem>
             <TabItem Header="Appearance">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="16">
@@ -61,7 +73,7 @@
                     <TextBlock Text="Reset moves the overlay to the bottom-center of your primary monitor."/>
                 </StackPanel>
             </TabItem>
-            <TabItem Header="Startup">
+            <TabItem Header="Windows">
                 <StackPanel Margin="16">
                     <CheckBox Content="Start LyricFloat with Windows" IsChecked="{Binding StartWithWindows}"/>
                     <CheckBox Content="Start minimized to tray" IsChecked="{Binding StartMinimized}"/>
@@ -71,6 +83,8 @@
             </TabItem>
             <TabItem Header="Maintenance">
                 <StackPanel Margin="16">
+                    <TextBlock Text="{Binding AppVersion}" FontWeight="SemiBold"/>
+                    <Button Content="Open Log Folder" Click="OnOpenLogs"/>
                     <Button Content="Clear Lyrics Cache" Click="OnClearCache"/>
                     <TextBlock Text="Removes only cached lyric files. Current lyrics may remain in memory. Spotify credentials and preferences are retained."/>
                     <Button Content="Reset to Defaults" Click="OnResetDefaults"/>

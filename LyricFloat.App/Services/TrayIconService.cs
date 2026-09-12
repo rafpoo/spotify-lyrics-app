@@ -31,7 +31,6 @@ public sealed class TrayIconService : IDisposable
         if (openSettings is not null)
         {
             _menu.Items.Add("Settings", null, (_, _) => openSettings());
-            _menu.Items.Add("Reset Overlay Position", null, (_, _) => _overlay.ResetPosition());
             _menu.Items.Add(new Forms.ToolStripSeparator());
         }
         if (_spotify is not null)
@@ -49,7 +48,7 @@ public sealed class TrayIconService : IDisposable
         _menu.Items.Add("Exit", null, (_, _) => exit());
         _visibility.Click += (_, _) => _overlay.ToggleVisibility();
         _lock.Click += (_, _) => _overlay.ToggleLock();
-        _image = (System.Drawing.Icon)System.Drawing.SystemIcons.Application.Clone();
+        _image = Helpers.AppIcon.Load();
         _icon = new Forms.NotifyIcon
         {
             Icon = _image,

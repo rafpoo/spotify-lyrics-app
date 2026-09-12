@@ -20,10 +20,9 @@ internal sealed class SpotifyPlaybackService(HttpClient http, SpotifyAuthService
             {
                 AppLog.Write("Spotify API returned 401.");
                 if (attempt == 1) throw new SpotifyAuthException();
-                try { access = await auth.GetAccessTokenAsync(cancellationToken, access); }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
-                catch (Exception e) when (e is HttpRequestException or OperationCanceledException or SpotifyAuthException)
-                { throw new SpotifyAuthException(); }
+                // A transport failure while refreshing is not proof of revoked authorization.
+                // Preserve credentials and let the polling loop retry after network recovery.
+                access = await auth.GetAccessTokenAsync(cancellationToken, access);
                 continue;
             }
             if (response.StatusCode == HttpStatusCode.TooManyRequests)

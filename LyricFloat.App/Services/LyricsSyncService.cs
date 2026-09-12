@@ -17,8 +17,8 @@ internal sealed class LyricsSyncService(
     private LyricsResult? _result;
     private long _generation;
     private double _songInfoUntil;
-    private double _messageUntil = double.PositiveInfinity;
-    private string _message = "Spotify not connected";
+    private double _messageUntil = double.NaN;
+    private string _message = "Connect Spotify from the LyricFloat tray icon";
     private bool _suspended;
     private bool _stopped;
     private int _timingOffsetMs;
@@ -115,7 +115,8 @@ internal sealed class LyricsSyncService(
         lock (_gate)
         {
             _clock.Freeze();
-            if (!_suspended) { _message = message; _messageUntil = _clock.Now + 4000; }
+            if (!_suspended && _result is not { Status: LyricsStatus.Synced or LyricsStatus.Instrumental })
+            { _message = message; _messageUntil = _clock.Now + 4000; }
             _suspended = true;
         }
     }
@@ -131,7 +132,7 @@ internal sealed class LyricsSyncService(
             _result = null;
             _suspended = false;
             _message = message;
-            _messageUntil = double.PositiveInfinity;
+            _messageUntil = _clock.Now + 5000;
             _songInfoUntil = 0;
         }
     }
@@ -141,10 +142,11 @@ internal sealed class LyricsSyncService(
         lock (_gate)
         {
             var info = _track is not null && _clock.Now < _songInfoUntil ? $"{_track.Name} — {_track.Artist}" : "";
-            if (!_suspended && _result is { Status: LyricsStatus.Synced } synced)
+            if (double.IsNaN(_messageUntil)) _messageUntil = _clock.Now + 5000;
+            if (_result is { Status: LyricsStatus.Synced } synced)
             {
                 var lines = LyricLookup.Select(synced.Lines, TimeSpan.FromMilliseconds(_clock.PositionMs - _timingOffsetMs));
-                return new(lines.Previous, lines.Current, lines.Next, info, !_clock.IsPlaying);
+                return new(lines.Previous, lines.Current, lines.Next, info, _track is { IsPlaying: false });
             }
             return new("", _clock.Now < _messageUntil ? _message : "", "", info, _track is { IsPlaying: false });
         }

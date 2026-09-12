@@ -8,8 +8,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>LyricFloat</AssemblyName>
     <RootNamespace>LyricFloat.App</RootNamespace>
+    <Version>0.1.0</Version>
+    <Product>LyricFloat</Product>
+    <AssemblyTitle>LyricFloat</AssemblyTitle>
+    <Description>Floating synchronized lyrics overlay for Windows</Description>
+    <Company>LyricFloat</Company>
+    <ApplicationIcon>Assets/LyricFloat.ico</ApplicationIcon>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PublishSingleFile>false</PublishSingleFile>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Assets/LyricFloat.ico" LogicalName="LyricFloat.Icon" />
     <None Update="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
     <InternalsVisibleTo Include="LyricFloat.Tests" />
     <Using Remove="System.Windows.Forms" />

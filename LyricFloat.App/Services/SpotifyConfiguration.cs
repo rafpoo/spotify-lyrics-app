@@ -11,8 +11,9 @@ internal sealed class SpotifyConfiguration
 
     public static SpotifyConfiguration Load()
     {
-        var path = Path.Combine(AppContext.BaseDirectory, "appsettings.Development.json");
-        if (!File.Exists(path)) throw new InvalidOperationException("Configure ClientId in LyricFloat.App/appsettings.Development.json, then rebuild.");
+        var path = Path.Combine(AppLog.DataDirectory, "spotify.json");
+        if (!File.Exists(path)) path = Path.Combine(AppContext.BaseDirectory, "appsettings.Development.json");
+        if (!File.Exists(path)) throw new InvalidOperationException("Open Settings → Spotify to configure your Client ID, then connect.");
         SpotifyConfiguration config;
         try
         {
@@ -22,12 +23,27 @@ internal sealed class SpotifyConfiguration
         }
         catch (Exception e) when (e is JsonException or KeyNotFoundException or InvalidOperationException)
         {
-            throw new InvalidOperationException("Invalid Spotify development configuration. Check the example file.");
+            throw new InvalidOperationException("Spotify configuration is invalid. Open Settings → Spotify to update it.");
         }
         if (string.IsNullOrWhiteSpace(config.ClientId) || config.ClientId.Length != 32 || !config.ClientId.All(Uri.IsHexDigit))
-            throw new InvalidOperationException("Set your 32-character Spotify Client ID in appsettings.Development.json.");
+            throw new InvalidOperationException("Enter your 32-character Spotify Client ID in Settings → Spotify.");
         if (config.RedirectUri != CallbackUri)
             throw new InvalidOperationException($"RedirectUri must be exactly {CallbackUri}");
         return config;
+    }
+
+    public static async Task SaveClientIdAsync(string clientId)
+    {
+        clientId = clientId.Trim();
+        if (clientId.Length != 32 || !clientId.All(Uri.IsHexDigit)) throw new InvalidOperationException("Enter a valid 32-character Spotify Client ID.");
+        Directory.CreateDirectory(AppLog.DataDirectory);
+        var path = Path.Combine(AppLog.DataDirectory, "spotify.json");
+        var temporary = path + ".tmp";
+        try
+        {
+            await File.WriteAllTextAsync(temporary, JsonSerializer.Serialize(new { Spotify = new SpotifyConfiguration { ClientId = clientId } }));
+            File.Move(temporary, path, true);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
 }

@@ -35,18 +35,28 @@ internal sealed class SettingsService
         {
             if (!File.Exists(_path)) return Validate(new());
             var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(_path), JsonOptions);
-            if (settings is null || settings.Version != 1)
+            if (settings is null || settings.Version is < 0 or > 1)
             {
+                BackupInvalid();
                 AppLog.Write("Unsupported settings version; using defaults.");
                 return Validate(new());
             }
+            // Version 0 is the legacy shape; initializer defaults fill missing properties.
+            if (settings.Version == 0) settings.Version = 1;
             return Validate(settings);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or JsonException)
         {
             AppLog.Write("Settings unreadable or corrupted; using defaults.");
+            BackupInvalid();
             return Validate(new());
         }
+    }
+
+    private void BackupInvalid()
+    {
+        try { if (File.Exists(_path)) File.Copy(_path, _path + ".invalid.bak", true); }
+        catch (Exception e) when (e is IOException or UnauthorizedAccessException) { AppLog.Write("Could not back up invalid settings.", "WARN", "Settings"); }
     }
 
     internal AppSettings Validate(AppSettings input)

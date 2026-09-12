@@ -16,10 +16,30 @@ public partial class App : Application
     private SettingsService? _settings;
     private SettingsViewModel? _settingsModel;
     private SettingsWindow? _settingsWindow;
+    private SingleInstanceService? _instance;
+    private ExceptionHandlingService? _exceptions;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        _exceptions = new ExceptionHandlingService(this, ExitApplication);
+        _exceptions.Install();
+        _instance = new SingleInstanceService();
+        if (!_instance.IsPrimary)
+        {
+            if (e.Args.Contains("--exit", StringComparer.OrdinalIgnoreCase)) _instance.SignalExit();
+            else _instance.SignalExisting();
+            Shutdown();
+            return;
+        }
+        if (e.Args.Contains("--exit", StringComparer.OrdinalIgnoreCase)) { Shutdown(); return; }
+        _instance.Listen(() =>
+        {
+            if (!_exiting && !Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(new Action(OpenSettings));
+        }, () =>
+        {
+            if (!_exiting && !Dispatcher.HasShutdownStarted) Dispatcher.BeginInvoke(new Action(ExitApplication));
+        });
         var fonts = Fonts.SystemFontFamilies.Select(f => f.Source).Distinct().ToArray();
         _settings = new SettingsService(fonts: fonts);
         var executable = Environment.ProcessPath;
@@ -31,11 +51,12 @@ public partial class App : Application
         { AppLog.Write("Could not read Windows startup configuration."); }
         var cache = new LyricsCache();
         var window = new OverlayWindow();
+        window.Icon = Helpers.AppIcon.Image();
         MainWindow = window;
         _overlay = new OverlayController(window, _settings);
         _spotify = new SpotifySessionController((OverlayViewModel)window.DataContext, Dispatcher, cache);
         _settings.Changed += OnPreferencesChanged;
-        _settingsModel = new SettingsViewModel(_settings, startup, _overlay, cache, fonts);
+        _settingsModel = new SettingsViewModel(_settings, startup, _overlay, cache, fonts, _spotify);
         _tray = new TrayIconService(_overlay, ExitApplication, _spotify, OpenSettings);
         _hotkeys = new HotkeyService(_overlay.ToggleVisibility, _overlay.ToggleLock);
         _overlay.InitializeFromSettings();
@@ -64,33 +85,41 @@ public partial class App : Application
     {
         if (_exiting) return;
         _exiting = true;
-        _hotkeys?.Dispose();
-        _tray?.Dispose();
-        _settingsWindow?.Close();
-        try { if (_spotify is not null) await _spotify.StopAsync(); }
-        catch (Exception e) { AppLog.Write($"Spotify shutdown failed ({e.GetType().Name}); closing application."); }
+        try
+        {
+            var stopping = _spotify?.StopAsync() ?? Task.CompletedTask;
+            _hotkeys?.Dispose();
+            _tray?.Dispose();
+            _settingsWindow?.Close();
+            await stopping.WaitAsync(TimeSpan.FromSeconds(8));
+            if (_settingsModel is not null) await _settingsModel.WaitForMaintenanceAsync().WaitAsync(TimeSpan.FromSeconds(3));
+            if (_settings is not null) await _settings.FlushAsync().WaitAsync(TimeSpan.FromSeconds(3));
+        }
+        catch (Exception e) { AppLog.Exception("Shutdown", e); }
         finally
         {
-            if (_settingsModel is not null) await _settingsModel.WaitForMaintenanceAsync();
-            if (_settings is not null) await _settings.FlushAsync();
             Cleanup();
+            AppLog.Write("Application stopped.", component: "Lifecycle");
             Shutdown();
         }
     }
 
     private void Cleanup()
     {
-        _hotkeys?.Dispose();
-        _tray?.Dispose();
-        _spotify?.Dispose();
-        _settingsModel?.Dispose();
+        void Safely(Action action) { try { action(); } catch (Exception e) { AppLog.Exception("Cleanup", e); } }
+        Safely(() => _hotkeys?.Dispose());
+        Safely(() => _tray?.Dispose());
+        Safely(() => _spotify?.Dispose());
+        Safely(() => _settingsModel?.Dispose());
         if (_settings is not null) _settings.Changed -= OnPreferencesChanged;
-        _overlay?.CloseForExit();
+        Safely(() => _overlay?.CloseForExit());
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
         Cleanup();
+        _exceptions?.Dispose();
+        _instance?.Dispose();
         base.OnExit(e);
     }
 }

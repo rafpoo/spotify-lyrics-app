@@ -28,8 +28,7 @@ public sealed class HotkeyService : IDisposable
     private void Register(int id, uint key, Action action)
     {
         if (RegisterHotKey(_source.Handle, id, Modifiers, key)) _actions.Add(id, action);
-        else Trace.TraceWarning("LyricFloat hotkey {0} unavailable (Win32 error {1}); use the tray menu.",
-            id, Marshal.GetLastWin32Error());
+        else AppLog.Write($"Hotkey {id} unavailable (Win32 error {Marshal.GetLastWin32Error()}); use the tray menu.", "WARN", "Hotkeys");
     }
 
     private nint OnMessage(nint hwnd, int message, nint wParam, nint lParam, ref bool handled)
@@ -49,7 +48,7 @@ public sealed class HotkeyService : IDisposable
         foreach (var id in _actions.Keys)
         {
             if (!UnregisterHotKey(_source.Handle, id))
-                Trace.TraceWarning("Could not unregister hotkey {0}: {1}", id, Marshal.GetLastWin32Error());
+                AppLog.Write($"Could not unregister hotkey {id}: {Marshal.GetLastWin32Error()}", "WARN", "Hotkeys");
         }
         _actions.Clear();
         _source.RemoveHook(OnMessage);

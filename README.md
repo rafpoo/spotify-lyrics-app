@@ -1,6 +1,51 @@
 # LyricFloat
 
-Native C# / WPF / .NET 10 Windows desktop utility. **Phase 5** adds persistent preferences, native Settings, live appearance customization, manual lyric timing offset, and current-user Windows startup to the existing synchronized LRCLIB overlay.
+Native C# / WPF / .NET 10 Windows desktop utility. **Phase 6 / version 0.1.0** adds single-instance activation, bounded diagnostics, release publishing, an Inno Setup installer definition, and first-run/offline cleanup.
+
+## Windows release: install and use
+
+Read [RELEASE-README.md](RELEASE-README.md) for end-user instructions. Extract the complete portable ZIP, or use the installer when compiled. Launch LyricFloat.exe, find its tray icon, open Settings → Spotify, save your developer application's Client ID, then choose Connect Spotify. Authorize in your usual browser and play a song. Ctrl+Shift+L shows/hides lyrics; Ctrl+Shift+K locks/unlocks click-through. Self-contained builds require no separate SDK or runtime installation.
+
+The release does not embed a developer Client ID. Spotify developer application/account access restrictions still apply. No client secret is requested. Settings writes the public Client ID to `%AppData%/LyricFloat/spotify.json`, which takes precedence over the optional development configuration. Tokens stay in the separate DPAPI store.
+
+Launching again signals the existing instance to open/focus Settings and exits the new process. A per-user/session mutex plus activation event prevents duplicate windows, tray icons, pollers, and hotkeys. The first-run connection hint disappears after five seconds; login never opens automatically.
+
+### Build release artifacts
+
+```powershell
+.\scripts\Build-Release.ps1
+```
+
+The script builds, tests, publishes self-contained win-x64, copies the release README, and creates the portable ZIP. It compiles the installer if Inno Setup is available. Otherwise it explicitly reports that compilation was skipped. For separate commands:
+
+```powershell
+dotnet publish LyricFloat.App -p:PublishProfile=WindowsPortable
+& 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' '.\installer\LyricFloat.iss'
+```
+
+Use Inno Setup 6.3+. The release script also accepts `-IsccPath` and `-SkipInstaller`. Publishing uses `LyricFloat.App/Properties/PublishProfiles/WindowsPortable.pubxml`, with trimming, single-file bundling, and ReadyToRun disabled. Icon artwork is original geometry in `scripts/New-AppIcon.ps1`; the generated multi-resolution ICO is used by the executable, windows, tray, and installer.
+
+```text
+artifacts/release/portable/LyricFloat.exe
+artifacts/release/LyricFloat-0.1.0-win-x64.zip
+artifacts/release/installer/LyricFloat-Setup-0.1.0.exe  (requires ISCC)
+```
+
+The per-user installer targets `%LocalAppData%/Programs/LyricFloat`, creates a Start Menu entry, optionally creates a Desktop shortcut, and registers uninstall. Exit LyricFloat before installing, upgrading, moving, or uninstalling. Enable Windows startup from the installed/permanent copy. Uninstall removes the startup value only if it targets that installed executable and preserves AppData preferences, credentials, cache, and logs.
+
+This release is unsigned and has no auto-updater. Windows may show an unknown-publisher warning. An installer definition alone is not a compiled or validated installer; consult the validation report below.
+
+### Validation performed for this build
+
+- Release build: zero warnings/errors; 200 automated assertions passed.
+- Self-contained portable executable launched directly. Required runtime files are present and developer configuration is excluded.
+- A second executable launch exited and focused Settings in the original process.
+- A 180-second desktop observation, including Settings/connection interaction, averaged 3.626% of one CPU core. Working set rose from 191.79 MB during initial activity to 256.29 MB, remaining around that level for the final minute. This is not an isolated idle benchmark or an authenticated playback soak test.
+- The published process exited through its ordered shutdown path with exit code 0. No OAuth listener remained.
+- Inno Setup compiler was unavailable: installer source is supplied, but installer compilation, installation, shortcuts, and uninstall remain unverified.
+- No Spotify Client ID or saved tokens were present for this run. Real login/restore/playback timing and several minutes of live Spotify playback remain manual release checks.
+
+`artifacts/release/runtime-check.json` records the runtime observation. Run `scripts/Test-PortableRelease.ps1` with all existing LyricFloat copies closed to repeat the launch/activation/shutdown observation.
 
 ## Requirements and build
 
@@ -78,9 +123,9 @@ A reused HttpClient reads the [official currently-playing endpoint](https://deve
 - HTTP 401 refreshes and retries once. Rejected authorization disconnects the session.
 - HTTP 403 shows an access message and retries after 30 seconds; check the app's account access/scopes.
 - HTTP 429 respects Retry-After, defaulting to 30 seconds when absent.
-- Network failure/timeouts keep the process alive and retry later. The lyric clock freezes and the overlay displays a brief retry message; recovery uses the next valid checkpoint without refetching the same song's lyrics.
+- Network failure/timeouts keep the process alive and retry later. The lyric clock freezes while retaining loaded lyrics, rather than blanking the overlay; recovery uses the next valid checkpoint without refetching the same song. A transport error during token refresh also preserves credentials. Rejected authorization still disconnects normally.
 
-Track ID changes are logged. Logs rotate at approximately 1 MB, retaining one previous file:
+Track ID changes are logged. Logs rotate at approximately 2 MB, retaining three previous files (`app.log.1` through `.3`), about 8 MB total. Entries include timestamp, level, component, and curated event text. Unexpected exceptions include type/HResult and method names, never raw exception messages, callback queries, tokens, or source paths:
 
 ```text
 %AppData%/LyricFloat/logs/app.log
@@ -92,7 +137,7 @@ Logs contain event names and track title/artist, not authentication secrets or r
 
 Defaults to visible and unlocked. Position, lock state, and visibility now persist across restarts. Left-drag to move. Locked mode passes clicks through and disables dragging; unlocking restores interaction. The window stays topmost and does not activate when shown. Right-click no longer exits. Start minimized to tray overrides saved visibility at launch without replacing the saved preference until you show/hide it yourself.
 
-Tray: Show/Hide Lyrics, Lock/Unlock Overlay, Settings, Reset Overlay Position, Connect Spotify (or Connected / Disconnect Spotify), Exit. Double-click toggles visibility. Connect is disabled during authentication to prevent duplicate browser windows/listeners.
+Tray: Show/Hide Lyrics, Lock/Unlock Overlay, Settings, Connect Spotify (or Connected / Disconnect Spotify), Exit. Reset Overlay Position remains in Settings. Double-click toggles visibility. Connect is disabled during authentication to prevent duplicate browser windows/listeners.
 
 | Shortcut | Action |
 | --- | --- |
@@ -103,7 +148,7 @@ Shortcuts remain global while another app is focused and while the overlay is hi
 
 ## Settings and persistence
 
-Use **Tray → Settings**. There is one normal interactive WPF settings window; choosing Settings again restores/focuses the same window. Settings is not click-through or permanently topmost, even when the overlay is locked. Tabs cover Appearance, Lyrics, Overlay, Startup, and Maintenance.
+Use **Tray → Settings**. There is one normal interactive WPF settings window; choosing Settings again restores/focuses the same window. Settings is not click-through or permanently topmost, even when the overlay is locked. Tabs cover Spotify, Appearance, Lyrics, Overlay, Windows, and Maintenance. Maintenance includes version and Open Log Folder.
 
 Preferences are stored separately from credentials, cache, and logs:
 
@@ -111,7 +156,7 @@ Preferences are stored separately from credentials, cache, and logs:
 %AppData%/LyricFloat/settings.json
 ```
 
-Schema version is 1. Unknown fields are ignored; unsupported schema versions, invalid JSON, or unreadable files fall back safely to defaults and log the problem. Numeric values are validated/clamped. A missing installed font falls back to Segoe UI (or another installed font if necessary).
+Schema version is 1. Version 0 migrates while preserving known preferences and defaulting missing fields. Unknown fields are ignored. Unsupported future versions or invalid JSON fall back safely and are copied to `settings.json.invalid.bak` before replacement when file permissions allow. Unreadable files also fall back without crashing. Numeric values are validated/clamped. A missing installed font falls back to Segoe UI (or another installed font if necessary).
 
 Changes apply immediately. Saving is debounced by 400 ms and uses a temporary file followed by atomic replacement. Exit flushes the final preferences. Position is captured after dragging, not for every mouse-move event. No settings writes are triggered by lyric ticks or Spotify polls. A save failure is logged and shown in Settings.
 
@@ -173,6 +218,12 @@ The actual executable path is quoted, including paths with spaces. Disabling rem
 - `Services/StartupService.cs`: isolated current-user Run entry with a fakeable registry interface.
 - `Helpers/OverlayPosition.cs`: pure working-area position validation.
 - `LyricFloat.Tests/Phase5Tests.cs`, `Phase5WindowTests.cs`: preference/startup/position/offset tests and native window regression checks.
+- `Services/SingleInstanceService.cs`: per-user/session mutex and activation/exit events.
+- `Services/ExceptionHandlingService.cs`: dispatcher, unobserved-task, and AppDomain exception diagnostics.
+- `Helpers/AppIcon.cs`, `Assets/LyricFloat.ico`: centralized original application artwork.
+- `Properties/PublishProfiles/WindowsPortable.pubxml`: conservative self-contained Windows publish settings.
+- `installer/LyricFloat.iss`, `scripts/Build-Release.ps1`, `scripts/New-AppIcon.ps1`, `scripts/Test-PortableRelease.ps1`: installer source and reproducible release/observation commands.
+- `LyricFloat.Tests/Phase6Tests.cs`: mutex signals, log bounds/privacy, migration, cache schema, and release configuration tests.
 - `LyricFloat.Tests`: dependency-free executable unit/integration test runner. No Spotify servers are called.
 
 ## Automated validation
@@ -186,6 +237,26 @@ The runner exits nonzero on failure. It covers the RFC 7636 S256 vector, verifie
 Phase 4 adds parser formats/edge cases, binary boundary selection, an injected clock without Thread.Sleep, forward/backward seeks, pause/resume, safe cache keys, corruption recovery, offline cache reuse, request de-duplication, a deliberately late cancelled response after the newer song is displayed, shutdown cancellation, and unchanged-frame notification checks. The automated suite calls neither Spotify nor LRCLIB servers.
 
 Phase 5 adds defaults and round-trip persistence, invalid settings and font fallback, future fields/versions, offset sign/live changes, quoted startup commands and value-name isolation using a fake registry, monitor geometry fixtures, cache-clear safety, and STA WPF window checks. Tests use temporary directories, not your actual settings or startup values. The native checks briefly open test windows and then close them.
+
+Phase 6 covers instance activation/shutdown signals, mutex release, legacy migration, corrupt-settings backups, bounded structured logging, exception redaction, old-cache fallback, embedded icon loading, and release/installer configuration. A diagnostic `LyricFloat.exe --exit` signals the existing instance through the same ordered shutdown action as tray Exit; if no instance is running, it simply exits. This supports release lifecycle checks without force-killing the application.
+
+## Release privacy and fault handling
+
+Tokens are stored locally using Windows DPAPI CurrentUser. LyricFloat communicates directly with Spotify and LRCLIB; it has no custom cloud backend, analytics SDK, or telemetry. Spotify receives playback/authentication requests, and LRCLIB receives song metadata for matching. Lyrics themselves are cached locally. Logs include track title/artist but never full lyrics or OAuth secrets.
+
+Dispatcher exceptions are logged and trigger ordered shutdown instead of continuing with unknown UI state. Unobserved task exceptions are logged and marked observed. AppDomain fatal exceptions are synchronously logged before the runtime terminates; resource handles are then released by Windows. Normal Exit cancels polling/lyrics/authentication, stops the timer, unregisters hotkeys, disposes the tray, awaits maintenance and preference writes, closes windows, and releases the instance mutex. Shutdown waits are bounded for fault cases.
+
+LyricFloat does not own the displayed lyrics. Availability and usage are subject to the provider and relevant rights holders. No commercial redistribution rights over lyrics are claimed.
+
+## Manual release regression checklist
+
+1. Extract the ZIP on Windows x64 and launch LyricFloat.exe directly without an SDK. Confirm tray icon, friendly first-run hint, and Settings. Launch again: only one process/tray remains and existing Settings focuses.
+2. Configure the exact Spotify redirect and Client ID in Settings, connect, restart to restore login, then test playback, pause/resume, seeks in both directions, rapid skips, and disconnect/reconnect. Leave connected long enough to test refresh.
+3. Check synced lyrics, timing offset signs, cache hit/clear, unavailable/plain-only/instrumental states. Temporarily remove network access: loaded lyrics should remain frozen, with recovery after connectivity returns.
+4. Check transparency, topmost, dragging, lock/click-through, show/hide, hotkeys, saved position, font/background changes, both display modes, reset, minimized startup, and disconnected-monitor recovery.
+5. Enable Windows startup from the installed/permanent location and verify the quoted Run path. Open logs and check rotation/redaction. Exit with Settings open and during an OAuth/lyrics request; confirm no process, callback listener, or tray icon remains. Relaunch to check released hotkeys/mutex.
+6. Compile the installer with ISCC, install per-user, test Start Menu/Desktop shortcuts and installed launch, then uninstall. Confirm binaries/shortcuts are removed, user data is preserved, and only a startup entry targeting that installed executable is removed.
+7. Observe several minutes of actual Spotify playback in Task Manager: no sustained CPU spikes or rapid memory growth, Spotify requests about every two seconds, and LRCLIB only on uncached track changes. Automated fixtures and idle observation do not replace this account-dependent test.
 
 ## Manual Phase 5 acceptance tests
 
@@ -301,6 +372,6 @@ Live account authorization and Spotify playback require your Dashboard configura
 
 ## Scope
 
-Phase 5 only. Some songs have no synced lyrics, some have only plain lyrics, and exact metadata matching may miss alternate versions. Lyrics timing may differ by source or recording. Very long lines may be clipped at the chosen font size. LRC offset tags are ignored; the manual global timing preference is supported. No installer, updater, word-by-word karaoke, translations, other providers, backend, or database. Topmost targets normal desktop windows, not exclusive fullscreen applications or secure Windows screens.
+Phase 6 only. Some songs have no synced lyrics, some have only plain lyrics, and exact matching may miss alternate versions. Timing can differ by source/recording. Long lines may be clipped at the chosen font size. LRC offset tags remain ignored; the global manual offset is supported. No updater, word-level karaoke, translation, extra provider, backend, or database. Topmost targets normal desktop windows, not exclusive fullscreen or secure Windows screens. Installer execution and account-dependent live playback require separate verification.
 
-**Spotify does not provide a public lyrics API. Lyrics are retrieved from an external lyrics provider: LRCLIB.** Phase 6 waits for manual verification.
+**Spotify does not provide a public lyrics API. Lyrics are retrieved from an external lyrics provider: LRCLIB.** No Phase 7 work is included.

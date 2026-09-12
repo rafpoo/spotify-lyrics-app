@@ -1,0 +1,82 @@
+<Window x:Class="LyricFloat.App.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="LyricFloat Settings" Width="560" Height="700" MinWidth="500" MinHeight="480"
+        WindowStartupLocation="CenterScreen" Background="#FAFAFA">
+    <Window.Resources>
+        <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/><Setter Property="Margin" Value="0,8,0,4"/></Style>
+        <Style TargetType="ComboBox"><Setter Property="Margin" Value="0,0,0,8"/><Setter Property="MinHeight" Value="28"/></Style>
+        <Style TargetType="CheckBox"><Setter Property="Margin" Value="0,10"/></Style>
+        <Style TargetType="Button"><Setter Property="Padding" Value="12,7"/><Setter Property="Margin" Value="0,8"/><Setter Property="HorizontalAlignment" Value="Left"/></Style>
+        <Style TargetType="Slider"><Setter Property="IsSnapToTickEnabled" Value="True"/><Setter Property="TickFrequency" Value="1"/><Setter Property="Margin" Value="0,0,0,8"/></Style>
+    </Window.Resources>
+    <DockPanel Margin="20">
+        <StackPanel DockPanel.Dock="Bottom">
+            <TextBlock Text="{Binding Status}" Foreground="#235B42"/>
+            <TextBlock Text="{Binding SaveStatus}" FontSize="12" Foreground="#666666"/>
+        </StackPanel>
+        <TextBlock DockPanel.Dock="Top" Text="LyricFloat" FontSize="24" FontWeight="SemiBold" Margin="0,0,0,16"/>
+        <TabControl>
+            <TabItem Header="Appearance">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="16">
+                        <TextBlock Text="Font family"/>
+                        <ComboBox ItemsSource="{Binding Fonts}" SelectedItem="{Binding FontFamily}"/>
+                        <TextBlock Text="{Binding CurrentFontSize, StringFormat='Current lyric size: {0:0} px'}"/>
+                        <Slider Minimum="16" Maximum="72" Value="{Binding CurrentFontSize}"/>
+                        <TextBlock Text="{Binding SecondaryFontSize, StringFormat='Secondary lyric size: {0:0} px'}"/>
+                        <Slider Minimum="12" Maximum="48" Value="{Binding SecondaryFontSize}"/>
+                        <TextBlock Text="Current lyric weight"/>
+                        <ComboBox ItemsSource="{Binding Weights}" SelectedItem="{Binding FontWeight}"/>
+                        <TextBlock Text="Text alignment"/>
+                        <ComboBox ItemsSource="{Binding Alignments}" SelectedItem="{Binding Alignment}"/>
+                        <TextBlock Text="{Binding TextOpacity, StringFormat='Current text opacity: {0:P0}'}"/>
+                        <Slider Minimum="0.1" Maximum="1" TickFrequency="0.05" Value="{Binding TextOpacity}"/>
+                        <TextBlock Text="{Binding SecondaryOpacity, StringFormat='Secondary text opacity: {0:P0}'}"/>
+                        <Slider Minimum="0.1" Maximum="1" TickFrequency="0.05" Value="{Binding SecondaryOpacity}"/>
+                        <TextBlock Text="Background mode"/>
+                        <ComboBox ItemsSource="{Binding BackgroundModes}" SelectedItem="{Binding BackgroundMode}"/>
+                        <TextBlock Text="{Binding BackgroundOpacity, StringFormat='Background opacity: {0:P0}'}"/>
+                        <Slider Minimum="0" Maximum="1" TickFrequency="0.05" Value="{Binding BackgroundOpacity}"/>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+            <TabItem Header="Lyrics">
+                <StackPanel Margin="16">
+                    <TextBlock Text="Display mode"/>
+                    <ComboBox ItemsSource="{Binding DisplayModes}" SelectedItem="{Binding DisplayMode}"/>
+                    <TextBlock Text="Minimal shows only the current lyric. ThreeLines includes previous and next lyrics."/>
+                    <TextBlock Text="{Binding TimingOffset, StringFormat='Lyrics timing offset: {0:+0;-0;0} ms'}" Margin="0,24,0,8"/>
+                    <Slider Minimum="-3000" Maximum="3000" TickFrequency="100" SmallChange="100" LargeChange="500" Value="{Binding TimingOffset}"/>
+                    <TextBlock Text="Negative = lyrics appear earlier. Positive = lyrics appear later. Changes take effect immediately without downloading lyrics again."/>
+                    <Button Content="Reset Timing" Click="OnResetTiming"/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Overlay">
+                <StackPanel Margin="16">
+                    <CheckBox Content="Show lyrics overlay" IsChecked="{Binding IsVisible}"/>
+                    <CheckBox Content="Lock overlay (click-through)" IsChecked="{Binding IsLocked}"/>
+                    <TextBlock Text="Unlock to drag the overlay. Its position is saved after dragging. The overlay stays above other normal desktop windows."/>
+                    <Button Content="Reset Overlay Position" Click="OnResetPosition"/>
+                    <TextBlock Text="Reset moves the overlay to the bottom-center of your primary monitor."/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Startup">
+                <StackPanel Margin="16">
+                    <CheckBox Content="Start LyricFloat with Windows" IsChecked="{Binding StartWithWindows}"/>
+                    <CheckBox Content="Start minimized to tray" IsChecked="{Binding StartMinimized}"/>
+                    <TextBlock Text="Start minimized overrides the saved visibility only at launch. Spotify and lyrics keep running. Use Ctrl+Shift+L or the tray to show lyrics."/>
+                    <TextBlock Text="Windows startup applies to your current Windows account. If you move the executable, disable and enable this option from the new location."/>
+                </StackPanel>
+            </TabItem>
+            <TabItem Header="Maintenance">
+                <StackPanel Margin="16">
+                    <Button Content="Clear Lyrics Cache" Click="OnClearCache"/>
+                    <TextBlock Text="Removes only cached lyric files. Current lyrics may remain in memory. Spotify credentials and preferences are retained."/>
+                    <Button Content="Reset to Defaults" Click="OnResetDefaults"/>
+                    <TextBlock Text="Resets ordinary preferences, startup registration, and overlay position. Spotify login and lyrics cache are retained."/>
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

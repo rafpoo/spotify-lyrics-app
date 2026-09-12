@@ -10,6 +10,8 @@
     <RootNamespace>LyricFloat.App</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
+    <None Update="appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="Never" />
+    <InternalsVisibleTo Include="LyricFloat.Tests" />
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
   </ItemGroup>

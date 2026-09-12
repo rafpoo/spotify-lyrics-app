@@ -8,20 +8,13 @@
         Background="Transparent"
         Topmost="True"
         ShowInTaskbar="False"
+        ShowActivated="False"
         ResizeMode="NoResize"
         WindowStartupLocation="Manual"
         Loaded="OnLoaded"
         MouseLeftButtonDown="OnMouseLeftButtonDown">
-    <Window.ContextMenu>
-        <ContextMenu>
-            <MenuItem Header="LyricFloat · Phase 1" IsEnabled="False" />
-            <MenuItem Header="Drag the lyrics to move" IsEnabled="False" />
-            <Separator />
-            <MenuItem Header="Exit LyricFloat" Click="OnExitClick" />
-        </ContextMenu>
-    </Window.ContextMenu>
-    <Border Background="Transparent" Padding="24,20" Cursor="SizeAll"
-            ToolTip="Drag to move · Right-click to exit">
+    <Border x:Name="LyricContainer" Background="Transparent" Padding="24,20" Cursor="SizeAll"
+            ToolTip="Unlocked — drag to move · Controls in the system tray">
         <StackPanel VerticalAlignment="Center">
             <StackPanel.Resources>
                 <Style TargetType="TextBlock">
